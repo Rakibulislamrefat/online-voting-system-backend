@@ -64,56 +64,49 @@ const getElectionById = async (req, res) => {
 // @desc    Cast a vote (Anonymous & Secure)
 // @route   POST /api/elections/vote
 // @access  Private (Voter)
+// @desc    Cast a vote (Anonymous & Secure)
+// @route   POST /api/elections/vote
+// @access  Private (Voter)
 const castVote = async (req, res) => {
     const { electionId, candidateId } = req.body;
     const voterId = req.user._id;
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         // 1. Check if user already voted (Check VoteRecord)
-        const existingVote = await VoteRecord.findOne({ voterId, electionId }).session(session);
+        const existingVote = await VoteRecord.findOne({ voterId, electionId });
         if (existingVote) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({ message: 'You have already voted in this election' });
         }
 
         // 2. Find Election & Check Status
-        const election = await Election.findById(electionId).session(session);
+        const election = await Election.findById(electionId);
         if (!election || election.phase !== 'ongoing') {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({ message: 'Election is not currently active' });
         }
 
         // 3. Create Anonymous Vote
-        await Vote.create([{
+        await Vote.create({
             electionId,
             candidateId,
             constituency: req.user.constituency // Store constituency for regional analysis
-        }], { session });
+        });
 
         // 4. Create Vote Record (Receipt)
-        await VoteRecord.create([{
+        await VoteRecord.create({
             voterId,
             electionId
-        }], { session });
+        });
 
         // 5. Update Candidate Count (Optimistic update for UI, ground truth is aggregation of Vote collection)
         const candidate = election.candidates.id(candidateId);
         if (candidate) {
             candidate.count += 1;
-            await election.save({ session });
+            await election.save();
         } else {
             throw new Error('Candidate not found');
         }
 
-        await session.commitTransaction();
-        session.endSession();
-
-        // 6. Real-time broadcast (Outside transaction)
+        // 6. Real-time broadcast
         const io = req.app.get('io');
         if (io) {
             io.emit('update_results', { electionId, candidates: election.candidates });
@@ -122,10 +115,8 @@ const castVote = async (req, res) => {
         res.status(201).json({ message: 'Vote cast successfully' });
 
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        console.error(error);
-        res.status(500).json({ message: 'Voting failed due to system error' });
+        console.error("Voting Error:", error);
+        res.status(500).json({ message: error.message || 'Voting failed due to system error' });
     }
 };
 
