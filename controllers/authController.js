@@ -65,6 +65,7 @@ const authUser = async (req, res) => {
                 name: voter.name,
                 email: voter.email,
                 role: 'voter',
+                constituency: voter.constituency,
                 token: generateToken(voter._id),
             });
         } else {

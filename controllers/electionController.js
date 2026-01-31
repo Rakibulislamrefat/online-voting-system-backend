@@ -129,4 +129,31 @@ const castVote = async (req, res) => {
     }
 };
 
-module.exports = { createElection, getElections, getElectionById, castVote };
+// @desc    Update election status (Start/End)
+// @route   PUT /api/elections/:id/status
+// @access  Private/Admin
+const updateElectionStatus = async (req, res) => {
+    const { phase } = req.body; // 'ongoing', 'ended'
+    try {
+        const election = await Election.findById(req.params.id);
+        if (election) {
+            election.phase = phase;
+            await election.save();
+
+            await AuditLog.create({
+                action: 'ELECTION_STATUS_UPDATE',
+                actorId: req.user._id,
+                actorType: 'Admin',
+                details: { electionId: election._id, newPhase: phase }
+            });
+
+            res.json(election);
+        } else {
+            res.status(404).json({ message: 'Election not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { createElection, getElections, getElectionById, castVote, updateElectionStatus };
