@@ -156,4 +156,40 @@ const updateElectionStatus = async (req, res) => {
     }
 };
 
-module.exports = { createElection, getElections, getElectionById, castVote, updateElectionStatus };
+// @desc    Update election details
+// @route   PUT /api/elections/:id
+// @access  Private/Admin
+const updateElection = async (req, res) => {
+    const { title, description, constituencies, startTime, endTime } = req.body;
+
+    try {
+        const election = await Election.findById(req.params.id);
+
+        if (election) {
+            // Note: Preventing candidate updates for simplicity to avoid vote integrity issues
+            // In a real app, complex logic is needed to handle candidate changes after votes are cast.
+            election.title = title || election.title;
+            election.description = description || election.description;
+            election.constituencies = constituencies || election.constituencies;
+            election.startTime = startTime || election.startTime;
+            election.endTime = endTime || election.endTime;
+
+            const updatedElection = await election.save();
+
+            await AuditLog.create({
+                action: 'ELECTION_UPDATED',
+                actorId: req.user._id,
+                actorType: 'Admin',
+                details: { electionId: election._id }
+            });
+
+            res.json(updatedElection);
+        } else {
+            res.status(404).json({ message: 'Election not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { createElection, getElections, getElectionById, castVote, updateElectionStatus, updateElection };
