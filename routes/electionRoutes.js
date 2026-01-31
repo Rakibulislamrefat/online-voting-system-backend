@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createElection, getElections, getElectionById, castVote, updateElectionStatus, updateElection } = require('../controllers/electionController');
+const { createElection, getElections, getElectionById, castVote, updateElectionStatus, updateElection, getVotingHistory } = require('../controllers/electionController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.route('/')
@@ -11,6 +11,7 @@ router.route('/:id')
     .get(getElectionById)
     .put(protect, admin, updateElection);
 
+router.route('/history').get(protect, getVotingHistory);
 router.route('/vote').post(protect, castVote);
 router.route('/:id/status').put(protect, admin, updateElectionStatus);
 

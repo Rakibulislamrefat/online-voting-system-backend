@@ -183,4 +183,17 @@ const updateElection = async (req, res) => {
     }
 };
 
-module.exports = { createElection, getElections, getElectionById, castVote, updateElectionStatus, updateElection };
+// @desc    Get checking if user voted
+// @route   GET /api/elections/history
+// @access  Private
+const getVotingHistory = async (req, res) => {
+    try {
+        const records = await VoteRecord.find({ voterId: req.user._id }).select('electionId');
+        const votedElectionIds = records.map(record => record.electionId);
+        res.json(votedElectionIds);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { createElection, getElections, getElectionById, castVote, updateElectionStatus, updateElection, getVotingHistory };
