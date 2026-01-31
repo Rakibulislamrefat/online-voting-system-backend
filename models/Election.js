@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const candidateSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    symbol: { type: String }, // URL or Name of symbol (Optional)
+    symbol: { type: String }, // Name of symbol
+    symbolImage: { type: String }, // URL to symbol image
     count: { type: Number, default: 0 }
 });
 
